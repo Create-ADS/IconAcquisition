@@ -9,10 +9,17 @@ import java.io.InputStream;
 import java.nio.charset.Charset;
 
 public class JavaFXUtils {
+    /**
+     * In the current folder DLL and load release.
+     */
     public static void init(){
         init(new File("./"));
     }
 
+    /**
+     * Will be released into the specified folder DLL loading.
+     * @param dir folder
+     */
     public static void init(File dir){
         if (dir.isFile()){
             throw new RuntimeException("Cannot be a file!");
@@ -55,7 +62,7 @@ public class JavaFXUtils {
     }
 
     /**
-     * 默认字符集
+     * The default character set.
      */
     private static final Charset DEFAULT_CHARSET = Charset.defaultCharset();
 
@@ -131,11 +138,5 @@ public class JavaFXUtils {
         return getIconForPng(file.getAbsoluteFile().getAbsolutePath().getBytes(charset), pixel);
     }
 
-    /**
-     * 获取指定文件图标
-     * @param bytes 字符串字节数组
-     * @param pixel 类像素值
-     * @return png
-     */
     private static native byte[] getIconForPng(byte[] bytes,int pixel);
 }
