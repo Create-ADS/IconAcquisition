@@ -9,61 +9,52 @@ void DrawPng(HICON hIcon,const char* outputFilePath, double scale)
     {
         printf("init Error: %d\n", GetLastError());
     }
-    //»ñÈ¡Í¼±êµÄĞÅÏ¢
     ICONINFO iconInfo;
     GetIconInfo(hIcon, &iconInfo);
     if (GetLastError() != 0)
     {
         printf("GetIconInfo Error: %d\n", GetLastError());
     }
-    //»ñÈ¡Í¼±êµÄ´óĞ¡
     int iconWidth = iconInfo.xHotspot * 2;
     int iconHeight = iconInfo.yHotspot * 2;
-    //´´½¨Ò»¸öÄÚ´æDC
     HDC hMemDC = CreateCompatibleDC(NULL);
     if (GetLastError() != 0)
     {
         printf("CreateCompatibleDC Error: %d\n", GetLastError());
     }
-    //´´½¨Ò»¸öÄÚ´æÎ»Í¼
     HBITMAP hMemBitmap = CreateCompatibleBitmap(hdc, iconWidth, iconHeight);
     if (GetLastError() != 0)
     {
         printf("CreateCompatibleBitmap Error: %d\n", GetLastError());
     }
-    //½«Î»Í¼Ñ¡ÈëÄÚ´æDC
     SelectObject(hMemDC, hMemBitmap);
     if (GetLastError() != 0)
     {
         printf("SelectObject Error: %d\n", GetLastError());
     }
-    //¸ù¾İËõ·Å±ÈÀı»æÖÆÍ¼±ê
     DrawIconEx(hMemDC, 0, 0, hIcon, iconWidth * scale, iconHeight * scale, 0, NULL, DI_NORMAL);
     if (GetLastError() != 0)
     {
         printf("DrawIconEx Error: %d\n", GetLastError());
     }
-    //±£´æpng¸ñÊ½µÄÍ¼Æ¬
     CLSID pngClsid;
     GetEncoderClsid(L"image/png", &pngClsid);
     Gdiplus::Bitmap bitmap(hMemBitmap, NULL);
     bitmap.Save(CharToWchar(outputFilePath), &pngClsid, NULL);
-    //´òÓ¡´íÎóĞÅÏ¢
     if (GetLastError() != 0)
     {
         printf("bitmap.Save Error: %d\n", GetLastError());
     }
-    //ÊÍ·Å×ÊÔ´
     DeleteObject(hMemBitmap);
     DeleteDC(hMemDC);
     DeleteObject(hIcon);
 }
 
 /**
- * @brief »ñÈ¡½âÂëÆ÷µÄCLSID
- * @param format ½âÂëÆ÷¸ñÊ½
+ * @brief è·å–è§£ç å™¨çš„CLSID
+ * @param format è§£ç å™¨æ ¼å¼
  * @param pClsid CLSID
- * @return 0³É¹¦£¬-1Ê§°Ü
+ * @return 0æˆåŠŸï¼Œ-1å¤±è´¥
 */
 int GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
 {
@@ -93,7 +84,7 @@ int GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
 
 
 /**
- * @brief const char* ×ª»»Îª TCHAR*
+ * @brief const char* è½¬æ¢ä¸º TCHAR*
  * @param str const char*
  * @return TCHAR*
 */
@@ -107,7 +98,7 @@ TCHAR* CharToTchar(const char* str)
 }
 
 /**
-* const char* ×ª WCHAR*
+* const char* è½¬ WCHAR*
 */
 WCHAR* CharToWchar(const char* str)
 {
@@ -119,7 +110,7 @@ WCHAR* CharToWchar(const char* str)
 }
 
 /**
- * const char* ×ª LPCWSTR
+ * const char* è½¬ LPCWSTR
 */
 LPCWSTR CharToLPCWSTR(const char* str)
 {
