@@ -1,9 +1,9 @@
 # IconAcquisition
-A tool class for obtaining high-definition images, which is used to replace FileSystemView and ShellFolder before JKD17.
+一个用于获取高清图像的工具类，用于取代JKD17之前的FileSystemView和ShellFolder。
 
-**English** | [中文](README_CN.md)
+ [English](README.md) | **中文**
 
-## Simple use example
+## 简单使用示例
 ```java
 import system.jni.JavaFXUtils;
 
@@ -17,8 +17,8 @@ class Test{
     }
 }
 ```
-## Compare with the API before JDK17
-### This is a temporary display panel
+## 对比JDK17之前的API
+### 这是一个临时的显示面板
 ![image](image/Pane.png)
 ### Use the following code to control the API for obtaining Icon
 ```
@@ -34,7 +34,7 @@ public static Image getIcon(File file) throws IOException {
     return null;
 }
 ```
-### Use FileSystemView to get the icon and display it
+### 使用FileSystemView获取图标并显示它
 ```
 try {
     return toFXImage(FileSystemView.getFileSystemView().getSystemIcon(file));
@@ -43,7 +43,7 @@ try {
 }
 ```
 ![image](image/FileSystemView.png)
-### Use ShellFolder to get the icon and display it
+### 使用ShellFolder获取图标并显示它
 ```
 try {
     return toFXImage(ShellFolder.getShellFolder(file).getIcon(true));
@@ -52,7 +52,7 @@ try {
 }
 ```
 ![image](image/ShellFolder.png)
-### Use IconAcquisition to get the icon and display it
+### 使用IconAcquisition获取图标并显示它
 ```
 try {
     return JavaFXUtils.getIconImageFX(file,1200);
