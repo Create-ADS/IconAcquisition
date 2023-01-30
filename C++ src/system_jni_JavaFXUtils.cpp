@@ -1,53 +1,47 @@
-#include "systemIcon.h"
+#include "system_jni_JavaFXUtils.h"
 
-void DrawPng(HICON hIcon,const char* outputFilePath, double scale)
+/*
+ * Class:     screen_creator_util_SystemTools
+ * Method:    getIcon
+ * Signature: ([B)[B
+ */
+JNIEXPORT jbyteArray JNICALL Java_system_jni_JavaFXUtils_getIconForPng(JNIEnv* env, jclass clasz, jbyteArray bytes, jint pixel)
 {
-    HDC hdc = GetDC(NULL);
-    scale = GetDeviceCaps(hdc, LOGPIXELSX) / 96.0;
-    ReleaseDC(NULL, hdc);
-    if (GetLastError() != 0)
-    {
-        printf("init Error: %d\n", GetLastError());
-    }
-    ICONINFO iconInfo;
-    GetIconInfo(hIcon, &iconInfo);
-    if (GetLastError() != 0)
-    {
-        printf("GetIconInfo Error: %d\n", GetLastError());
-    }
-    int iconWidth = iconInfo.xHotspot * 2;
-    int iconHeight = iconInfo.yHotspot * 2;
-    HDC hMemDC = CreateCompatibleDC(NULL);
-    if (GetLastError() != 0)
-    {
-        printf("CreateCompatibleDC Error: %d\n", GetLastError());
-    }
-    HBITMAP hMemBitmap = CreateCompatibleBitmap(hdc, iconWidth, iconHeight);
-    if (GetLastError() != 0)
-    {
-        printf("CreateCompatibleBitmap Error: %d\n", GetLastError());
-    }
-    SelectObject(hMemDC, hMemBitmap);
-    if (GetLastError() != 0)
-    {
-        printf("SelectObject Error: %d\n", GetLastError());
-    }
-    DrawIconEx(hMemDC, 0, 0, hIcon, iconWidth * scale, iconHeight * scale, 0, NULL, DI_NORMAL);
-    if (GetLastError() != 0)
-    {
-        printf("DrawIconEx Error: %d\n", GetLastError());
-    }
-    CLSID pngClsid;
-    GetEncoderClsid(L"image/png", &pngClsid);
-    Gdiplus::Bitmap bitmap(hMemBitmap, NULL);
-    bitmap.Save(CharToWchar(outputFilePath), &pngClsid, NULL);
-    if (GetLastError() != 0)
-    {
-        printf("bitmap.Save Error: %d\n", GetLastError());
-    }
-    DeleteObject(hMemBitmap);
-    DeleteDC(hMemDC);
-    DeleteObject(hIcon);
+	jbyte* bytess = env->GetByteArrayElements(bytes, 0);
+	jsize size1 = env->GetArrayLength(bytes);
+	TCHAR* path = CharToTchar(ByteToChar(bytess, size1));
+	SHFILEINFO shFileInfo = { 0 };
+	BOOL ret;
+	CoInitialize(NULL);
+
+	ret = SHGetFileInfo(path, 0, &shFileInfo, sizeof(shFileInfo), SHGFI_ICON | SHGFI_SYSICONINDEX);
+	if (!ret || shFileInfo.hIcon == NULL || shFileInfo.hIcon == INVALID_HANDLE_VALUE)
+	{
+		CoUninitialize();
+		return NULL;
+	}
+
+	Gdiplus::GdiplusStartupInput gdiplusStartupInput;
+	ULONG_PTR gdiplusToken;
+	GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
+	int size = 0;
+	BYTE* buffer = SaveIconToPngBytes(shFileInfo, pixel, pixel, size);
+	if (buffer == NULL)
+	{
+		delete[] buffer;
+		Gdiplus::GdiplusShutdown(gdiplusToken);
+		DestroyIcon(shFileInfo.hIcon);
+		CoUninitialize();
+		return NULL;
+	}
+	jbyteArray array = env->NewByteArray(size);
+	env->SetByteArrayRegion(array, 0, size, (jbyte*)buffer);
+
+	delete[] buffer;
+	Gdiplus::GdiplusShutdown(gdiplusToken);
+	DestroyIcon(shFileInfo.hIcon);
+	CoUninitialize();
+	return array;
 }
 
 /**
@@ -82,6 +76,117 @@ int GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
 	return found;
 }
 
+/**
+ * @brief 获取文件图标并保存为PNG格式字节数组
+ * @param SHFILEINFO 文件图标信息
+ * @param int w 指定宽度
+ * @param int h 指定高度
+ * @param int size PNG字节数组大小
+ * @return BYTE* PNG字节数组
+*/
+BYTE* SaveIconToPngBytes(SHFILEINFO shFileInfo, int w, int h, int& size)
+{
+	HICON hIcon = shFileInfo.hIcon;
+
+	HDC hdc = GetDC(NULL);
+	HDC hMemDC = CreateCompatibleDC(hdc);
+	HBITMAP hBitmap = CreateCompatibleBitmap(hdc, w, h);
+	HBITMAP hOldBitmap = (HBITMAP)SelectObject(hMemDC, hBitmap);
+
+	DrawIconEx(hMemDC, 0, 0, hIcon, w, h, 0, NULL, DI_NORMAL);
+	SelectObject(hMemDC, hOldBitmap);
+
+	DeleteDC(hMemDC);
+	SetStretchBltMode(hdc, HALFTONE);
+	SetBrushOrgEx(hdc, 0, 0, NULL);
+	ReleaseDC(NULL, hdc);
+
+	ICONINFO iconInfo = { 0 };
+	iconInfo.fIcon = TRUE;
+	iconInfo.hbmColor = hBitmap;
+	iconInfo.hbmMask = hBitmap;
+	HICON hIcon2 = CreateIconIndirect(&iconInfo);
+
+	DeleteObject(hBitmap);
+
+	BYTE* bytes = SaveHIconToPngBytes(hIcon2, size);
+
+	DestroyIcon(hIcon);
+	DestroyIcon(hIcon2);
+	return bytes;
+}
+
+/**
+ * @brief 保存HICON到PNG格式字节数组
+ * @param hIcon HICON
+ * @param size 字节数组大小
+*/
+BYTE* SaveHIconToPngBytes(HICON hIcon, int& size)
+{
+	if (hIcon == NULL)
+	{
+		return NULL;
+	}
+
+	ICONINFO icInfo = { 0 };
+	if (!::GetIconInfo(hIcon, &icInfo))
+	{
+		return NULL;
+	}
+
+	BITMAP bitmap;
+	GetObject(icInfo.hbmColor, sizeof(BITMAP), &bitmap);
+
+	Gdiplus::Bitmap* pBitmap = NULL;
+	Gdiplus::Bitmap* pWrapBitmap = NULL;
+
+	do
+	{
+		if (bitmap.bmBitsPixel != 32)
+		{
+			pBitmap = Gdiplus::Bitmap::FromHICON(hIcon);
+		}
+		else
+		{
+			pWrapBitmap = Gdiplus::Bitmap::FromHBITMAP(icInfo.hbmColor, NULL);
+			if (!pWrapBitmap)
+				break;
+
+			Gdiplus::BitmapData bitmapData;
+			Gdiplus::Rect rcImage(0, 0, pWrapBitmap->GetWidth(), pWrapBitmap->GetHeight());
+
+			pWrapBitmap->LockBits(&rcImage, Gdiplus::ImageLockModeRead, pWrapBitmap->GetPixelFormat(), &bitmapData);
+			pBitmap = new (Gdiplus::Bitmap)(bitmapData.Width, bitmapData.Height, bitmapData.Stride, PixelFormat32bppARGB, (BYTE*)bitmapData.Scan0);
+			pWrapBitmap->UnlockBits(&bitmapData);
+		}
+
+		CLSID encoderCLSID;
+		GetEncoderClsid(CharToWchar("image/png"), &encoderCLSID);
+		IStream* pStream = NULL;
+		CreateStreamOnHGlobal(NULL, TRUE, &pStream);
+		Gdiplus::Status st = pBitmap->Save(pStream, &encoderCLSID, NULL);
+		if (st != Gdiplus::Ok)
+			break;
+		STATSTG statstg;
+		pStream->Stat(&statstg, STATFLAG_NONAME);
+		size = statstg.cbSize.LowPart;
+		BYTE* buffer = new BYTE[size];
+		LARGE_INTEGER li = { 0 };
+		pStream->Seek(li, STREAM_SEEK_SET, NULL);
+		ULONG read = 0;
+		pStream->Read(buffer, size, &read);
+		pStream->Release();
+		return buffer;
+	} while (false);
+
+	delete pBitmap;
+	if (pWrapBitmap)
+		delete pWrapBitmap;
+	DeleteObject(icInfo.hbmColor);
+	DeleteObject(icInfo.hbmMask);
+
+	return NULL;
+}
 
 /**
  * @brief const char* 转换为 TCHAR*
@@ -110,39 +215,16 @@ WCHAR* CharToWchar(const char* str)
 }
 
 /**
- * const char* 转 LPCWSTR
-*/
-LPCWSTR CharToLPCWSTR(const char* str)
+ * byte* 转 char*
+ * 字节格式为UTF-8
+ */
+char* ByteToChar(jbyte* bytes, int len)
 {
-    int len = MultiByteToWideChar(CP_ACP, 0, str, -1, NULL, 0);
-    WCHAR* p = new WCHAR[len + 1];
-    memset(p, 0, len + 1);
-    MultiByteToWideChar(CP_ACP, 0, str, -1, p, len);
-    return p;
-}
-
-int main()
-{
-    SHFILEINFO shFileInfo = { 0 };
-	BOOL ret;
-	CoInitialize(NULL);
-    ret = SHGetFileInfo(CharToLPCWSTR("C:\\Users\\adm\\Desktop\\iconsext.exe"), 0, &shFileInfo, sizeof(shFileInfo), SHGFI_ICON | SHGFI_SYSICONINDEX);
-    if (!ret || shFileInfo.hIcon == NULL || shFileInfo.hIcon == INVALID_HANDLE_VALUE)
+	char* str = new char[len + 1];
+	for (int i = 0; i < len; i++)
 	{
-		CoUninitialize();
-		printf("SHGetFileInfo Error: %d\n", GetLastError());
-        return -1;
+		str[i] = bytes[i];
 	}
-    Gdiplus::GdiplusStartupInput gdiplusStartupInput;
-	ULONG_PTR gdiplusToken;
-	GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
-    DrawPng(shFileInfo.hIcon, "E:\\Run\\test.png", 1.0);
-    if (GetLastError() != 0)
-    {
-        printf("DrawPng Error: %d\n", GetLastError());
-    }
-
-    Gdiplus::GdiplusShutdown(gdiplusToken);
-	DestroyIcon(shFileInfo.hIcon);
-	CoUninitialize();
+	str[len] = '\0';
+	return str;
 }
