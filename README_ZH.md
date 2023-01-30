@@ -20,7 +20,7 @@ class Test{
 ## 对比JDK17之前的API
 ### 这是一个临时的显示面板
 ![image](image/Pane.png)
-### Use the following code to control the API for obtaining Icon
+### 这是一个用于展示结果的面板
 ```
 public static Image getIcon(File file) throws IOException {
     if (file == null) {
