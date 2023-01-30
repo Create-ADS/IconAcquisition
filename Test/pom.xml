@@ -22,7 +22,7 @@
             <artifactId>IconAcquisition</artifactId>
             <version>1.0.0</version>
             <scope>system</scope>
-            <systemPath>${project.basedir}/lib/IconAcquisition-1.0-SNAPSHOT.jar</systemPath>
+            <systemPath>${project.basedir}/lib/IconAcquisition.jar</systemPath>
         </dependency>
     </dependencies>
 </project>

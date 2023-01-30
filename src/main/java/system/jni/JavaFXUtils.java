@@ -39,9 +39,7 @@ public class JavaFXUtils {
                 throw new RuntimeException("javafx_utils_windows_x86.dll is not found in jar");
             }
         }
-        if (!dir.mkdirs()) {
-            throw new RuntimeException("Cannot create directory!");
-        }
+        dir.mkdirs();
         File file = new File(dir, "javafx_utils_windows.dll");
         if (file.exists()){
             return;
